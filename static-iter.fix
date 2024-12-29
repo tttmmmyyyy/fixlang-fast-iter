@@ -1,0 +1,195 @@
+module StaticIter;
+
+trait iter : Iterable {
+    type Item iter;
+    advance : iter -> Option (iter, Item iter);
+}
+
+fold : [iter : Iterable, Item iter = a] s -> (s -> a -> s) -> iter -> s;
+fold = |s, op, iter| (
+    match iter.advance {
+        none() => s,
+        some((iter, a)) => iter.fold(op(s, a), op)
+    }
+);
+
+loop_iter : [iter : Iterable, Item iter = a] s -> (s -> a -> LoopState s s) -> iter -> s;
+loop_iter = |s, body, iter| (
+    match iter.advance {
+        none() => s,
+        some((iter, a)) => match body(s, a) {
+            break(s) => s,
+            continue(s) => iter.loop_iter(s, body),
+        }
+    }
+);
+
+to_array : [iter : Iterable, Item iter = a] iter -> Array a;
+to_array = |iter| iter.fold([], |acc, a| acc.push_back(a));
+
+type ArrayIterator a = unbox struct { arr : Array a, idx : I64 };
+
+impl ArrayIterator a : Iterable {
+    type Item (ArrayIterator a) = a;
+    advance = |ArrayIterator { arr : arr, idx : idx }| (
+        if idx == arr.get_size { none() };
+        let v = arr.@(idx);
+        some((ArrayIterator { arr: arr, idx: idx + 1 }, v))
+    );
+}
+
+from_array : Array a -> ArrayIterator a;
+from_array = |arr| ArrayIterator { arr: arr, idx: 0 };
+
+type RangeIterator = unbox struct { next : I64, end : I64 };
+
+impl RangeIterator : Iterable {
+    type Item RangeIterator = I64;
+    advance = |RangeIterator { next : next, end : end }| (
+        if next == end { Option::none() }
+        else { Option::some $ (RangeIterator { next: next + 1, end: end }, next) }
+    );
+}
+
+range : I64 -> I64 -> RangeIterator;
+range = |start, end| RangeIterator { next: start, end: end };
+
+type MapIterator i a b = unbox struct { iter : i, f : a -> b };
+impl [i : Iterable, Item i = a] MapIterator i a b : Iterable {
+    type Item (MapIterator i a b) = b;
+    advance = |MapIterator { iter : iter, f : f }| (
+        match iter.advance {
+            none() => none(),
+            some((iter, a)) => some((MapIterator { iter: iter, f: f }, f(a)))
+        }
+    );
+}
+
+map : [i : Iterable, Item i = a] (a -> b) -> i -> MapIterator i a b;
+map = |f, iter| MapIterator { iter: iter, f: f };
+
+type FilterIterator i a = unbox struct { iter : i, pred : a -> Bool };
+impl [i : Iterable, Item i = a] FilterIterator i a : Iterable {
+    type Item (FilterIterator i a) = Item i;
+    advance = |FilterIterator { iter : iter, pred : pred }| (
+        match iter.advance {
+            none() => none(),
+            some((iter, a)) => if pred(a) { 
+                some((FilterIterator { iter: iter, pred: pred }, a))
+            } else {
+                FilterIterator { iter: iter, pred: pred }.advance
+            }
+        }
+    );
+}
+
+filter : [i : Iterable, Item i = a] (a -> Bool) -> i -> FilterIterator i a;
+filter = |pred, iter| FilterIterator { iter: iter, pred: pred };
+
+type FlattenIterator i2 i1 = unbox struct { i2 : i2, i1 : Option i1 };
+impl [i2 : Iterable, i1: Iterable, Item i2 = i1] FlattenIterator i2 i1 : Iterable {
+    type Item (FlattenIterator i2 i1) = Item i1;
+    advance = |FlattenIterator { i2 : i2, i1 : i1 }| (
+        match i1 {
+            none() => (
+                match i2.advance {
+                    none() => none(),
+                    some((i2, i1)) => FlattenIterator { i2: i2, i1: some(i1) }.advance
+                }
+            ),
+            some(i1) => (
+                match i1.advance {
+                    none() => FlattenIterator { i2: i2, i1: none() }.advance,
+                    some((i1, a)) => some $ (FlattenIterator { i2: i2, i1: some(i1) }, a)
+                }
+            )
+        }
+    );
+}
+
+flatten : [i2 : Iterable, i1 : Iterable, Item i2 = i1] i2 -> FlattenIterator i2 i1;
+flatten = |i2| FlattenIterator { i2: i2, i1: none() };
+
+type ProductIterator i1 i2 a b = unbox struct { iter1 : i1, iter2 : i2, e2 : Option b, iter1_org : i1 };
+impl [i1 : Iterable, i2 : Iterable, Item i1 = a, Item i2 = b] ProductIterator i1 i2 a b : Iterable {
+    type Item (ProductIterator i1 i2 a b) = (Item i1, Item i2);
+    advance = |ProductIterator { iter1 : iter1, iter2 : iter2, e2 : e2, iter1_org : iter1_org }| (
+        match e2 {
+            some(e2) => (
+                match iter1.advance {
+                    some((iter1, e1)) => some $ (ProductIterator { iter1: iter1, iter2: iter2, e2: some(e2), iter1_org : iter1_org }, (e1, e2)),
+                    none() => match iter2.advance {
+                        none() => none(),
+                        some((iter2, e2)) => ProductIterator { iter1: iter1_org, iter2: iter2, e2: some(e2), iter1_org : iter1_org }.advance
+                    },
+                }
+            ),
+            none() => (
+                match iter2.advance {
+                    none() => none(),
+                    some((iter2, e2)) => ProductIterator { iter1: iter1, iter2: iter2, e2: some(e2), iter1_org : iter1_org }.advance
+                }
+            ),
+        }
+    );
+}
+
+product : [i1 : Iterable, i2 : Iterable, Item i1 = a, Item i2 = b] i2 -> i1 -> ProductIterator i1 i2 a b;
+product = |iter2, iter1| ProductIterator { iter1: iter1, iter2: iter2, e2: none(), iter1_org: iter1 };
+
+// type StateIterator s a = unbox struct {
+//     state : Option s,
+//     transit : s -> Option (s, a)
+// };
+
+// namespace StateIterator {
+//     make : s -> (s -> Option (s, a)) -> StateIterator s a;
+//     make = |state, transit| StateIterator { state: some(state), transit: transit };
+
+//     empty : StateIterator s a;
+//     empty = StateIterator { state: none(), transit: |s| none() };
+// }
+
+// impl StateIterator s a : Iterable {
+//     type Item (StateIterator s a) = a;    
+//     advance = |StateIterator { state : s, transit : f }| (
+//         match s {
+//             none() => none(),
+//             some(s) => match f(s) {
+//                 none() => none(),
+//                 some((s, a)) => some((StateIterator::make(s, f), a))
+//             }
+//         }
+//     );
+// }
+
+// to_state : [iter: Iterable, Item iter = a] iter -> StateIterator iter a;
+// to_state = |iter| StateIterator::make(iter, |iter| iter.advance);
+
+type DynamicIterator a = unbox struct { next : () -> Option (DynamicIterator a, a) };
+
+namespace DynamicIterator {
+    empty : DynamicIterator a;
+    empty = DynamicIterator { next: |_| none() };
+}
+
+impl DynamicIterator a : Iterable {
+    type Item (DynamicIterator a) = a;
+    advance = |DynamicIterator { next : next }| next();
+}
+
+to_dyn : [iter : Iterable, Item iter = a] iter -> DynamicIterator a;
+to_dyn = |iter| DynamicIterator { next: |_| (
+    match iter.advance {
+        none() => none(),
+        some((iter, a)) => some((iter.to_dyn, a))
+    }
+) };
+
+// flatten_dyn : DynamicIterator (DynamicIterator a) -> FlattenIterator (DynamicIterator (DynamicIterator a)) (DynamicIterator a);
+// flatten_dyn = |i| i.StaticIter::flatten;
+
+// impl DynamicIterator : Monad {
+//     pure = |a| DynamicIterator::empty;
+//     bind = |f, xs| xs.map(f).flatten.to_dyn;
+// }

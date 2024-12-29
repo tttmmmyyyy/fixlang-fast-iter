@@ -1,0 +1,135 @@
+module Test;
+import StaticIter;
+
+test_range : IO ();
+test_range = (
+    println $ "\n[test_range]";;
+
+    let n = 100000;
+    let ans = n * (n - 1) / 2;
+
+    let (res, time) = consumed_time_while_lazy(|_|
+        StaticIter::range(0, n).fold(0, |sum, i| sum + i)
+    );
+    assert_eq(|_|"sum_by_fold", res, ans);;
+    println("sum_by_fold: " + time.to_string);;
+
+    let (res, time) = consumed_time_while_lazy(|_|
+        Iterator::range(0, n).fold(0, |sum, i| sum + i)
+    );
+    println("sum_by_fold_old: " + time.to_string);;
+
+    pure()
+);
+
+test_loop_iter : IO ();
+test_loop_iter = (
+    println $ "\n[test_loop_iter]";;
+
+    let n = 100000;
+    let ans = n * (n - 1) / 2;
+
+    let (res, time) = consumed_time_while_lazy(|_|
+        StaticIter::range(0, 2*n).loop_iter(0, |sum, i| if i == n { break(sum) } else { continue(sum + i) })
+    );
+    assert_eq(|_|"sum_by_loop_iter", res, ans);;
+    println("sum_by_loop_iter: " + time.to_string);;
+
+    let (res, time) = consumed_time_while_lazy(|_|
+        Iterator::range(0, 2*n).loop_iter(0, |sum, i| if i == n { break(sum) } else { continue(sum + i) })
+    );
+    println("sum_by_loop_iter_old: " + time.to_string);;
+
+    pure()
+);
+
+test_to_array_from_array : IO ();
+test_to_array_from_array = (
+    println $ "\n[test_to_array_from_array]";;
+
+    let n = 1000;
+
+    let (res, time) = consumed_time_while_lazy(|_|
+        StaticIter::range(0, n).to_array
+    );
+    println("range_to_array: " + time.to_string);;
+
+    let (res, time) = consumed_time_while_lazy(|_|
+        Iterator::range(0, n).to_array
+    );
+    println("range_to_array_old: " + time.to_string);;
+
+    let arr = ["0", "1", "2", "3", "4"];
+    assert_eq(|_|"", arr.StaticIter::from_array.to_array, arr);;
+
+    pure()
+);
+
+test_flatten : IO ();
+test_flatten = (
+    println $ "\n[test_flatten]";;
+
+    assert_eq(|_|"", [[1, 2, 3], [], [4, 5, 6]].StaticIter::from_array.map(StaticIter::from_array).flatten.to_array, [1, 2, 3, 4, 5, 6]);;
+    assert_eq(|_|"", [[]].StaticIter::from_array.map(StaticIter::from_array).flatten.to_array, [] : Array I64);;
+    assert_eq(|_|"", [].StaticIter::from_array.map(StaticIter::from_array).flatten.to_array, [] : Array I64);;
+
+    pure()
+);
+
+test_map_filter : IO ();
+test_map_filter = (
+    println $ "\n[test_map_filter]";;
+
+    let n = 100000;
+    let ans = n/3 + n/5 - n/15;
+
+    let (res, time) = consumed_time_while_lazy(|_|
+        StaticIter::range(0, n).filter(|i| i % 3 == 0 || i % 5 == 0).map(|i| 1).fold(0, |sum, i| sum + i)
+    );
+    assert_eq(|_|"count_div_by_3_or_5", res, ans);;
+    println("count_div_by_3_or_5: " + time.to_string);;
+
+    let (res, time) = consumed_time_while_lazy(|_|
+        Iterator::range(0, n).filter(|i| i % 3 == 0 || i % 5 == 0).map(|i| 1).fold(0, |sum, i| sum + i)
+    );
+    println("count_div_by_3_or_5_old: " + time.to_string);;
+
+    pure()
+);
+
+test_product : IO ();
+test_product = (
+    println $ "\n[test_product]";;
+
+    assert_eq(|_|"", StaticIter::range(1, 4).product(['a', 'b'].from_array).to_array, [(1, 'a'), (2, 'a'), (3, 'a'), (1, 'b'), (2, 'b'), (3, 'b')]);;
+
+    let n = 50;
+    let (res1, time) = consumed_time_while_lazy(|_|
+        let r1 = StaticIter::range(1, n);
+        let r2 = StaticIter::range(1, 2*n*n);
+        r1.product(r1).product(r2).filter(|((a, b), c)| a*a + b*b == c*c).fold(0, |sum, _| sum + 1)
+    );
+    println("pythagorean_triple: " + time.to_string);;
+
+    let (res2, time) = consumed_time_while_lazy(|_|
+        let r1 = Iterator::range(1, n);
+        let r2 = Iterator::range(1, 2*n*n);
+        r1.product(r1).product(r2).filter(|((a, b), c)| a*a + b*b == c*c).fold(0, |sum, _| sum + 1)
+    );
+    println("pythagorean_triple_old: " + time.to_string);;
+    assert_eq(|_|"pythagorean_triple", res1, res2);;
+
+    pure()
+);
+
+test : IO ();
+test = (
+    test_range;;
+    test_loop_iter;;
+    test_to_array_from_array;;
+    test_map_filter;;
+    test_flatten;;
+    test_product;;
+
+    pure()
+);
