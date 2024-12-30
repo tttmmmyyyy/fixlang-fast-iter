@@ -58,16 +58,6 @@ impl ArrayIterator a : Iterable {
 from_array : Array a -> ArrayIterator a;
 from_array = |arr| ArrayIterator { arr: arr, idx: 0 };
 
-type RangeIterator = unbox struct { next : I64, end : I64 };
-
-impl RangeIterator : Iterable {
-    type Item RangeIterator = I64;
-    advance = |RangeIterator { next : next, end : end }| (
-        if next == end { Option::none() }
-        else { Option::some $ (RangeIterator { next: next + 1, end: end }, next) }
-    );
-}
-
 /*
     Basic iterators.
 */
@@ -81,6 +71,16 @@ impl EmptyIterator a : Iterable {
 // An iterator that yields no elements.
 empty : EmptyIterator a;
 empty = EmptyIterator {};
+
+type RangeIterator = unbox struct { next : I64, end : I64 };
+
+impl RangeIterator : Iterable {
+    type Item RangeIterator = I64;
+    advance = |RangeIterator { next : next, end : end }| (
+        if next == end { Option::none() }
+        else { Option::some $ (RangeIterator { next: next + 1, end: end }, next) }
+    );
+}
 
 // Creates an iterator that generates a range of numbers.
 // 
