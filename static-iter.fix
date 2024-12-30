@@ -432,6 +432,9 @@ type DynamicIterator a = unbox struct { next : () -> Option (DynamicIterator a, 
 namespace DynamicIterator {
     empty : DynamicIterator a;
     empty = DynamicIterator { next: |_| none() };
+
+    singleton : a -> DynamicIterator a;
+    singleton = |a| DynamicIterator { next: |_| some((DynamicIterator::empty, a)) };
 }
 
 impl DynamicIterator a : Iterable {
@@ -448,6 +451,6 @@ to_dyn = |iter| DynamicIterator { next: |_| (
 ) };
 
 impl DynamicIterator : Monad {
-    pure = |a| DynamicIterator::empty;
+    pure = |a| DynamicIterator::singleton(a);
     bind = |f, xs| xs.map(f).flatten.to_dyn;
 }
