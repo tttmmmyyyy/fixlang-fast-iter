@@ -478,12 +478,13 @@ impl DynamicIterator a : Iterable {
 // Convert an iterator to a dynamic iterator.
 // 
 // NOTE: 
+// 
 // The advantage of `DynamicIterator` is that it hides how the iterator is constructed and simplifies the type,
 // especially allowing the use of monadic operations.
 // However, iterating over `DynamicIterator` are much slower than other iterators provided in this module.
 // Therefore, if performance is important, it is better to avoid using `DynamicIterator`.
 //
-// en: In particular, if you iterate over the same `DynamicIterator` multiple times, 
+// In particular, if you iterate over the same `DynamicIterator` multiple times, 
 // consider converting it to an `ArrayIterator` using `bang` before iterating.
 to_dyn : [iter : Iterable, Item iter = a] iter -> DynamicIterator a;
 to_dyn = |iter| DynamicIterator { next: |_| (
