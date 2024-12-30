@@ -1,31 +1,47 @@
 module StaticIter;
 
+// The trait Iterable is a trait for types that can be iterated over.
 trait iter : Iterable {
     type Item iter;
     advance : iter -> Option (iter, Item iter);
 }
 
-fold : [iter : Iterable, Item iter = a] s -> (s -> a -> s) -> iter -> s;
+/*
+    Folding and looping.
+*/
+
+// Folds the elements of an iterable from left to right.
+//
+// Conceptually, `[a0, a1, a2, ...].fold(s, op) = s.op(a0).op(a1).op(a2)...`.
+fold : [iter : Iterable, Item iter = a] s -> (a -> s -> s) -> iter -> s;
 fold = |s, op, iter| (
     match iter.advance {
         none() => s,
-        some((iter, a)) => iter.fold(op(s, a), op)
+        some((iter, a)) => iter.fold(op(a, s), op)
     }
 );
 
-loop_iter : [iter : Iterable, Item iter = a] s -> (s -> a -> LoopState s s) -> iter -> s;
+// Loop over the elements of an iterable.
+// 
+// This function is similar to `fold` but a more general version of it. It allows the user to break out of the loop early.
+loop_iter : [iter : Iterable, Item iter = a] s -> (a -> s -> LoopState s s) -> iter -> s;
 loop_iter = |s, body, iter| (
     match iter.advance {
         none() => s,
-        some((iter, a)) => match body(s, a) {
+        some((iter, a)) => match body(a, s) {
             break(s) => s,
             continue(s) => iter.loop_iter(s, body),
         }
     }
 );
 
+/*
+    Conversion from / to arrays.
+*/
+
+// Converts an iterator to an array.
 to_array : [iter : Iterable, Item iter = a] iter -> Array a;
-to_array = |iter| iter.fold([], |acc, a| acc.push_back(a));
+to_array = |iter| iter.fold([], |a, acc| acc.push_back(a));
 
 type ArrayIterator a = unbox struct { arr : Array a, idx : I64 };
 
@@ -38,6 +54,7 @@ impl ArrayIterator a : Iterable {
     );
 }
 
+// Converts an array to an iterator.
 from_array : Array a -> ArrayIterator a;
 from_array = |arr| ArrayIterator { arr: arr, idx: 0 };
 
@@ -51,6 +68,25 @@ impl RangeIterator : Iterable {
     );
 }
 
+/*
+    Basic iterators.
+*/
+
+type EmptyIterator a = unbox struct {};
+impl EmptyIterator a : Iterable {
+    type Item (EmptyIterator a) = a;
+    advance = |_| none();
+}
+
+// An iterator that yields no elements.
+empty : EmptyIterator a;
+empty = EmptyIterator {};
+
+// Creates an iterator that generates a range of numbers.
+// 
+// `range(a, b)` generates a range of numbers from `a` to `b - 1`.
+// 
+// If `a` is greater than or equal to `b`, the iterator will an infinite sequence of `a`.
 range : I64 -> I64 -> RangeIterator;
 range = |start, end| RangeIterator { next: start, end: end };
 
@@ -65,6 +101,29 @@ impl [i : Iterable, Item i = a] MapIterator i a b : Iterable {
     );
 }
 
+type CountUpIterator = unbox struct { next : I64 };
+impl CountUpIterator : Iterable {
+    type Item CountUpIterator = I64;
+    advance = |CountUpIterator { next : next }| some((CountUpIterator { next: next + 1 }, next));
+}
+
+// Creates an iterator that counts up from a number.
+// 
+// `count_up(start)` generates an infinite sequence of numbers starting from `start`.
+count_up : I64 -> CountUpIterator;
+count_up = |start| CountUpIterator { next: start };
+
+/*
+    Extract information from iterators.
+*/
+
+// Gets the number of elements in an iterator.
+get_size : [iter : Iterable] iter -> I64;
+get_size = |iter| iter.fold(0, |_, acc| acc + 1);
+
+// Maps a function over an iterator.
+// 
+// `iter.map(f)` returns an iterator that applies `f` to each element of `iter`.
 map : [i : Iterable, Item i = a] (a -> b) -> i -> MapIterator i a b;
 map = |f, iter| MapIterator { iter: iter, f: f };
 
@@ -83,6 +142,9 @@ impl [i : Iterable, Item i = a] FilterIterator i a : Iterable {
     );
 }
 
+// Filters the elements of an iterator by a predicate.
+// 
+// `iter.filter(pred)` returns an iterator that only yields elements of `iter` for which `pred` returns `true`.
 filter : [i : Iterable, Item i = a] (a -> Bool) -> i -> FilterIterator i a;
 filter = |pred, iter| FilterIterator { iter: iter, pred: pred };
 
@@ -107,6 +169,7 @@ impl [i2 : Iterable, i1: Iterable, Item i2 = i1] FlattenIterator i2 i1 : Iterabl
     );
 }
 
+// Flattens an iterator of iterators.
 flatten : [i2 : Iterable, i1 : Iterable, Item i2 = i1] i2 -> FlattenIterator i2 i1;
 flatten = |i2| FlattenIterator { i2: i2, i1: none() };
 
@@ -134,8 +197,44 @@ impl [i1 : Iterable, i2 : Iterable, Item i1 = a, Item i2 = b] ProductIterator i1
     );
 }
 
+// Creates an iterator that yields the Cartesian product of two iterators.
+// 
+// NOTE: Since this function is designed so that `iter1.product(iter2)` yields the Cartesian product, the elements of `product(iter2, iter1)` are in the opposite order.
+// 
+// Example:
+// ```
+// assert_eq(|_|"", range(1, 4).product(['a', 'b'].from_array).to_array, [(1, 'a'), (2, 'a'), (3, 'a'), (1, 'b'), (2, 'b'), (3, 'b')]);;
+// ```
 product : [i1 : Iterable, i2 : Iterable, Item i1 = a, Item i2 = b] i2 -> i1 -> ProductIterator i1 i2 a b;
 product = |iter2, iter1| ProductIterator { iter1: iter1, iter2: iter2, e2: none(), iter1_org: iter1 };
+
+type AppendIterator i1 i2 = unbox struct { iter1 : Option i1, iter2 : i2 };
+
+impl [i1 : Iterable, i2 : Iterable, Item i1 = a, Item i2 = a] AppendIterator i1 i2 : Iterable {
+    type Item (AppendIterator i1 i2) = Item i2;
+    advance = |AppendIterator { iter1 : iter1, iter2 : iter2 }| (
+        match iter1 {
+            none() => (
+                match iter2.advance {
+                    none() => none(),
+                    some((iter2, a)) => some $ (AppendIterator { iter1: none(), iter2: iter2 }, a)
+                }
+            ),
+            some(iter1) => (
+                match iter1.advance {
+                    none() => AppendIterator { iter1: none(), iter2: iter2 }.advance,
+                    some((iter1, a)) => some $ (AppendIterator { iter1: some(iter1), iter2: iter2 }, a)
+                }
+            )
+        }
+    );
+}
+
+// Appends two iterators.
+// 
+// NOTE: Since this function is designed so that `iter1.append(iter2)` appends `iter2` after `iter1`, `append(iter1, iter2)` appends iterators in the opposite order.
+append : [i1 : Iterable, i2 : Iterable, Item i1 = a, Item i2 = a] i2 -> i1 -> AppendIterator i1 i2;
+append = |iter2, iter1| AppendIterator { iter1 : some(iter1), iter2 : iter2 };
 
 // type StateIterator s a = unbox struct {
 //     state : Option s,

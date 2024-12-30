@@ -30,7 +30,7 @@ test_loop_iter = (
     let ans = n * (n - 1) / 2;
 
     let (res, time) = consumed_time_while_lazy(|_|
-        StaticIter::range(0, 2*n).loop_iter(0, |sum, i| if i == n { break(sum) } else { continue(sum + i) })
+        StaticIter::range(0, 2*n).loop_iter(0, |i, sum| if i == n { break(sum) } else { continue(sum + i) })
     );
     assert_eq(|_|"sum_by_loop_iter", res, ans);;
     println("sum_by_loop_iter: " + time.to_string);;
@@ -72,6 +72,7 @@ test_flatten = (
     assert_eq(|_|"", [[1, 2, 3], [], [4, 5, 6]].StaticIter::from_array.map(StaticIter::from_array).flatten.to_array, [1, 2, 3, 4, 5, 6]);;
     assert_eq(|_|"", [[]].StaticIter::from_array.map(StaticIter::from_array).flatten.to_array, [] : Array I64);;
     assert_eq(|_|"", [].StaticIter::from_array.map(StaticIter::from_array).flatten.to_array, [] : Array I64);;
+    assert_eq(|_|"", StaticIter::from_array([StaticIter::range(1, 4), range(4, 4), range(4, 7)]).flatten.to_array, StaticIter::range(1, 7).to_array);;
 
     pure()
 );
@@ -84,7 +85,7 @@ test_map_filter = (
     let ans = n/3 + n/5 - n/15;
 
     let (res, time) = consumed_time_while_lazy(|_|
-        StaticIter::range(0, n).filter(|i| i % 3 == 0 || i % 5 == 0).map(|i| 1).fold(0, |sum, i| sum + i)
+        StaticIter::range(0, n).filter(|i| i % 3 == 0 || i % 5 == 0).map(|i| 1).fold(0, |i, sum| sum + i)
     );
     assert_eq(|_|"count_div_by_3_or_5", res, ans);;
     println("count_div_by_3_or_5: " + time.to_string);;
@@ -107,7 +108,7 @@ test_product = (
     let (res1, time) = consumed_time_while_lazy(|_|
         let r1 = StaticIter::range(1, n);
         let r2 = StaticIter::range(1, 2*n*n);
-        r1.product(r1).product(r2).filter(|((a, b), c)| a*a + b*b == c*c).fold(0, |sum, _| sum + 1)
+        r1.product(r1).product(r2).filter(|((a, b), c)| a*a + b*b == c*c).fold(0, |_, sum| sum + 1)
     );
     println("pythagorean_triple: " + time.to_string);;
 
@@ -122,6 +123,24 @@ test_product = (
     pure()
 );
 
+test_get_size : IO ();
+test_get_size = (
+    println $ "\n[test_get_size]";;
+
+    assert_eq(|_|"", StaticIter::range(1, 4).get_size, 3);;
+
+    pure()
+);
+
+test_empty : IO ();
+test_empty = (
+    println $ "\n[test_empty]";;
+
+    assert_eq(|_|"", (StaticIter::empty : EmptyIterator I64).get_size, 0);;
+
+    pure()
+);
+
 test : IO ();
 test = (
     test_range;;
@@ -130,6 +149,8 @@ test = (
     test_map_filter;;
     test_flatten;;
     test_product;;
+    test_get_size;;
+    test_empty;;
 
     pure()
 );
