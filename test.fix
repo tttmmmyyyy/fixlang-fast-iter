@@ -141,6 +141,139 @@ test_empty = (
     pure()
 );
 
+test_get_first : IO ();
+test_get_first = (
+    println $ "\n[test_get_first]";;
+
+    assert_eq(|_|"", StaticIter::range(1, 4).get_front, 1);;
+
+    pure()
+);
+
+test_remove_first : IO ();
+test_remove_first = (
+    println $ "\n[test_remove_first]";;
+
+    assert_eq(|_|"", StaticIter::range(1, 4).pop_front.to_array, [2, 3]);;
+    assert_eq(|_|"", StaticIter::range(0, 0).pop_front.to_array, []);;
+
+    pure()
+);
+
+test_is_empty : IO ();
+test_is_empty = (
+    println $ "\n[test_is_empty]";;
+
+    assert_eq(|_|"", StaticIter::range(1, 4).is_empty, false);;
+    assert_eq(|_|"", StaticIter::range(0, 0).is_empty, true);;
+
+    pure()
+);
+
+test_fold_m : IO ();
+test_fold_m = (
+    println $ "\n[test_fold_m]";;
+
+    StaticIter::range(0, 10).fold_m(0, |i, sum|
+        let sum = sum + i;
+        println $ "sum up to " + i.to_string + ": " + sum.to_string;;
+        pure $ sum
+    );;
+
+    pure()
+);
+
+test_loop_iter_m : IO ();
+test_loop_iter_m = (
+    println $ "\n[test_loop_iter_m]";;
+
+    StaticIter::range(0, 20).loop_iter_m(0, |i, sum|
+        if i == 10 { break_m $ sum };
+        let sum = sum + i;
+        println $ "sum up to " + i.to_string + ": " + sum.to_string;;
+        continue_m $ sum
+    );;
+
+    pure()
+);
+
+test_generate : IO ();
+test_generate = (
+    println $ "\n[test_generate]";;
+
+    let iter = StaticIter::generate(0, |_| Option::none());
+    assert_eq(|_|"", iter.to_array, [] : Array I64);;
+
+    let iter = Iterator::generate(0, |i| if i == 3 { Option::none() } else { Option::some $ (i, i+1) });
+    assert_eq(|_|"", iter.to_array, [0, 1, 2]);;
+
+    pure()
+);
+
+test_intersperse : IO ();
+test_intersperse = (
+    println $ "\n[test_intersperse]";;
+
+    assert_eq(|_|"", StaticIter::range(1, 4).intersperse(0).to_array, [1, 0, 2, 0, 3]);;
+    assert_eq(|_|"", StaticIter::range(1, 2).intersperse(0).to_array, [1]);;
+    assert_eq(|_|"", StaticIter::range(1, 1).intersperse(0).to_array, [] : Array I64);;
+
+    pure()
+);
+
+test_push_front : IO ();
+test_push_front = (
+    println $ "\n[test_push_front]";;
+
+    let iter = StaticIter::empty.push_front(3).push_front(2).push_front(1).push_front(0);
+    assert_eq(|_|"", iter.to_array, [0, 1, 2, 3]);;
+
+    pure()
+);
+
+test_take : IO ();
+test_take = (
+    println $ "\n[test_take]";;
+
+    assert_eq(|_|"", StaticIter::range(1, 4).take(2).to_array, [1, 2]);;
+    assert_eq(|_|"", StaticIter::range(1, 4).take(0).to_array, [] : Array I64);;
+
+    pure()
+);
+
+test_take_while : IO ();
+test_take_while = (
+    println $ "\n[test_take_while]";;
+
+    assert_eq(|_|"", StaticIter::range(1, 4).take_while(|i| i < 3).to_array, [1, 2]);;
+    assert_eq(|_|"", StaticIter::range(1, 4).take_while(|i| i < 1).to_array, [] : Array I64);;
+
+    pure()
+);
+
+test_zip : IO ();
+test_zip = (
+    println $ "\n[test_zip]";;
+
+    let iter = StaticIter::range(1, 4).zip(StaticIter::range(4, 10));
+    assert_eq(|_|"", iter.to_array, [(1, 4), (2, 5), (3, 6)]);;
+
+    pure()
+);
+
+test_monad : IO ();
+test_monad = (
+    println $ "\n[test_monad]";;
+
+    let iter = do {
+        let x = *StaticIter::range(1, 4).to_dyn;
+        let y = *['A', 'B'].StaticIter::from_array.to_dyn;
+        pure $ (x, y)
+    };
+
+    pure()
+);
+
 test : IO ();
 test = (
     test_range;;
@@ -151,6 +284,18 @@ test = (
     test_product;;
     test_get_size;;
     test_empty;;
+    test_get_first;;
+    test_remove_first;;
+    test_is_empty;;
+    test_fold_m;;
+    test_loop_iter_m;;
+    test_generate;;
+    test_intersperse;;
+    test_push_front;;
+    test_take;;
+    test_take_while;;
+    test_zip;;
+    test_monad;;
 
     pure()
 );
