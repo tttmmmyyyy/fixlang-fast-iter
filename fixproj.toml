@@ -1,6 +1,6 @@
 [general]
 ## Project name. This is a required field.
-name = "static-iter"
+name = "fast-iter"
 
 ## Project version (in semver). This is a required field.
 version = "0.1.0"
@@ -17,7 +17,7 @@ version = "0.1.0"
 [build]
 ## Fix source files to be compiled.
 ## Merged with files specified in the command line argument.
-files = ["static-iter.fix"]
+files = ["fast-iter.fix"]
 
 ## Object files to be linked.
 ## Merged with object files specified in the command line argument.

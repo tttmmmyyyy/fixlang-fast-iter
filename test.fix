@@ -1,5 +1,5 @@
 module Test;
-import StaticIter;
+import FastIterator;
 
 test_range : IO ();
 test_range = (
@@ -9,7 +9,7 @@ test_range = (
     let ans = n * (n - 1) / 2;
 
     let (res, time) = consumed_time_while_lazy(|_|
-        StaticIter::range(0, n).fold(0, |sum, i| sum + i)
+        FastIterator::range(0, n).fold(0, |sum, i| sum + i)
     );
     assert_eq(|_|"sum_by_fold", res, ans);;
     println("sum_by_fold: " + time.to_string);;
@@ -30,7 +30,7 @@ test_loop_iter = (
     let ans = n * (n - 1) / 2;
 
     let (res, time) = consumed_time_while_lazy(|_|
-        StaticIter::range(0, 2*n).loop_iter(0, |i, sum| if i == n { break(sum) } else { continue(sum + i) })
+        FastIterator::range(0, 2*n).loop_iter(0, |i, sum| if i == n { break(sum) } else { continue(sum + i) })
     );
     assert_eq(|_|"sum_by_loop_iter", res, ans);;
     println("sum_by_loop_iter: " + time.to_string);;
@@ -50,7 +50,7 @@ test_to_array_from_array = (
     let n = 1000;
 
     let (res, time) = consumed_time_while_lazy(|_|
-        StaticIter::range(0, n).to_array
+        FastIterator::range(0, n).to_array
     );
     println("range_to_array: " + time.to_string);;
 
@@ -60,7 +60,7 @@ test_to_array_from_array = (
     println("range_to_array_old: " + time.to_string);;
 
     let arr = ["0", "1", "2", "3", "4"];
-    assert_eq(|_|"", arr.StaticIter::from_array.to_array, arr);;
+    assert_eq(|_|"", arr.FastIterator::from_array.to_array, arr);;
 
     pure()
 );
@@ -69,10 +69,10 @@ test_flatten : IO ();
 test_flatten = (
     println $ "\n[test_flatten]";;
 
-    assert_eq(|_|"", [[1, 2, 3], [], [4, 5, 6]].StaticIter::from_array.map(StaticIter::from_array).flatten.to_array, [1, 2, 3, 4, 5, 6]);;
-    assert_eq(|_|"", [[]].StaticIter::from_array.map(StaticIter::from_array).flatten.to_array, [] : Array I64);;
-    assert_eq(|_|"", [].StaticIter::from_array.map(StaticIter::from_array).flatten.to_array, [] : Array I64);;
-    assert_eq(|_|"", StaticIter::from_array([StaticIter::range(1, 4), range(4, 4), range(4, 7)]).flatten.to_array, StaticIter::range(1, 7).to_array);;
+    assert_eq(|_|"", [[1, 2, 3], [], [4, 5, 6]].FastIterator::from_array.map(FastIterator::from_array).flatten.to_array, [1, 2, 3, 4, 5, 6]);;
+    assert_eq(|_|"", [[]].FastIterator::from_array.map(FastIterator::from_array).flatten.to_array, [] : Array I64);;
+    assert_eq(|_|"", [].FastIterator::from_array.map(FastIterator::from_array).flatten.to_array, [] : Array I64);;
+    assert_eq(|_|"", FastIterator::from_array([FastIterator::range(1, 4), range(4, 4), range(4, 7)]).flatten.to_array, FastIterator::range(1, 7).to_array);;
 
     pure()
 );
@@ -85,7 +85,7 @@ test_map_filter = (
     let ans = n/3 + n/5 - n/15;
 
     let (res, time) = consumed_time_while_lazy(|_|
-        StaticIter::range(0, n).filter(|i| i % 3 == 0 || i % 5 == 0).map(|i| 1).fold(0, |i, sum| sum + i)
+        FastIterator::range(0, n).filter(|i| i % 3 == 0 || i % 5 == 0).map(|i| 1).fold(0, |i, sum| sum + i)
     );
     assert_eq(|_|"count_div_by_3_or_5", res, ans);;
     println("count_div_by_3_or_5: " + time.to_string);;
@@ -102,12 +102,12 @@ test_product : IO ();
 test_product = (
     println $ "\n[test_product]";;
 
-    assert_eq(|_|"", StaticIter::range(1, 4).product(['a', 'b'].from_array).to_array, [(1, 'a'), (2, 'a'), (3, 'a'), (1, 'b'), (2, 'b'), (3, 'b')]);;
+    assert_eq(|_|"", FastIterator::range(1, 4).product(['a', 'b'].from_array).to_array, [(1, 'a'), (2, 'a'), (3, 'a'), (1, 'b'), (2, 'b'), (3, 'b')]);;
 
     let n = 50;
     let (res1, time) = consumed_time_while_lazy(|_|
-        let r1 = StaticIter::range(1, n);
-        let r2 = StaticIter::range(1, 2*n*n);
+        let r1 = FastIterator::range(1, n);
+        let r2 = FastIterator::range(1, 2*n*n);
         r1.product(r1).product(r2).filter(|((a, b), c)| a*a + b*b == c*c).fold(0, |_, sum| sum + 1)
     );
     println("pythagorean_triple: " + time.to_string);;
@@ -127,7 +127,7 @@ test_get_size : IO ();
 test_get_size = (
     println $ "\n[test_get_size]";;
 
-    assert_eq(|_|"", StaticIter::range(1, 4).get_size, 3);;
+    assert_eq(|_|"", FastIterator::range(1, 4).get_size, 3);;
 
     pure()
 );
@@ -136,7 +136,7 @@ test_empty : IO ();
 test_empty = (
     println $ "\n[test_empty]";;
 
-    assert_eq(|_|"", (StaticIter::empty : EmptyIterator I64).get_size, 0);;
+    assert_eq(|_|"", (FastIterator::empty : EmptyIterator I64).get_size, 0);;
 
     pure()
 );
@@ -145,7 +145,7 @@ test_get_first : IO ();
 test_get_first = (
     println $ "\n[test_get_first]";;
 
-    assert_eq(|_|"", StaticIter::range(1, 4).get_front, 1);;
+    assert_eq(|_|"", FastIterator::range(1, 4).get_front, 1);;
 
     pure()
 );
@@ -154,8 +154,8 @@ test_remove_first : IO ();
 test_remove_first = (
     println $ "\n[test_remove_first]";;
 
-    assert_eq(|_|"", StaticIter::range(1, 4).pop_front.to_array, [2, 3]);;
-    assert_eq(|_|"", StaticIter::range(0, 0).pop_front.to_array, []);;
+    assert_eq(|_|"", FastIterator::range(1, 4).pop_front.to_array, [2, 3]);;
+    assert_eq(|_|"", FastIterator::range(0, 0).pop_front.to_array, []);;
 
     pure()
 );
@@ -164,8 +164,8 @@ test_is_empty : IO ();
 test_is_empty = (
     println $ "\n[test_is_empty]";;
 
-    assert_eq(|_|"", StaticIter::range(1, 4).is_empty, false);;
-    assert_eq(|_|"", StaticIter::range(0, 0).is_empty, true);;
+    assert_eq(|_|"", FastIterator::range(1, 4).is_empty, false);;
+    assert_eq(|_|"", FastIterator::range(0, 0).is_empty, true);;
 
     pure()
 );
@@ -174,7 +174,7 @@ test_fold_m : IO ();
 test_fold_m = (
     println $ "\n[test_fold_m]";;
 
-    StaticIter::range(0, 10).fold_m(0, |i, sum|
+    FastIterator::range(0, 10).fold_m(0, |i, sum|
         let sum = sum + i;
         println $ "sum up to " + i.to_string + ": " + sum.to_string;;
         pure $ sum
@@ -187,7 +187,7 @@ test_loop_iter_m : IO ();
 test_loop_iter_m = (
     println $ "\n[test_loop_iter_m]";;
 
-    StaticIter::range(0, 20).loop_iter_m(0, |i, sum|
+    FastIterator::range(0, 20).loop_iter_m(0, |i, sum|
         if i == 10 { break_m $ sum };
         let sum = sum + i;
         println $ "sum up to " + i.to_string + ": " + sum.to_string;;
@@ -201,7 +201,7 @@ test_generate : IO ();
 test_generate = (
     println $ "\n[test_generate]";;
 
-    let iter = StaticIter::generate(0, |_| Option::none());
+    let iter = FastIterator::generate(0, |_| Option::none());
     assert_eq(|_|"", iter.to_array, [] : Array I64);;
 
     let iter = Iterator::generate(0, |i| if i == 3 { Option::none() } else { Option::some $ (i, i+1) });
@@ -214,9 +214,9 @@ test_intersperse : IO ();
 test_intersperse = (
     println $ "\n[test_intersperse]";;
 
-    assert_eq(|_|"", StaticIter::range(1, 4).intersperse(0).to_array, [1, 0, 2, 0, 3]);;
-    assert_eq(|_|"", StaticIter::range(1, 2).intersperse(0).to_array, [1]);;
-    assert_eq(|_|"", StaticIter::range(1, 1).intersperse(0).to_array, [] : Array I64);;
+    assert_eq(|_|"", FastIterator::range(1, 4).intersperse(0).to_array, [1, 0, 2, 0, 3]);;
+    assert_eq(|_|"", FastIterator::range(1, 2).intersperse(0).to_array, [1]);;
+    assert_eq(|_|"", FastIterator::range(1, 1).intersperse(0).to_array, [] : Array I64);;
 
     pure()
 );
@@ -225,7 +225,7 @@ test_push_front : IO ();
 test_push_front = (
     println $ "\n[test_push_front]";;
 
-    let iter = StaticIter::empty.push_front(3).push_front(2).push_front(1).push_front(0);
+    let iter = FastIterator::empty.push_front(3).push_front(2).push_front(1).push_front(0);
     assert_eq(|_|"", iter.to_array, [0, 1, 2, 3]);;
 
     pure()
@@ -235,8 +235,8 @@ test_take : IO ();
 test_take = (
     println $ "\n[test_take]";;
 
-    assert_eq(|_|"", StaticIter::range(1, 4).take(2).to_array, [1, 2]);;
-    assert_eq(|_|"", StaticIter::range(1, 4).take(0).to_array, [] : Array I64);;
+    assert_eq(|_|"", FastIterator::range(1, 4).take(2).to_array, [1, 2]);;
+    assert_eq(|_|"", FastIterator::range(1, 4).take(0).to_array, [] : Array I64);;
 
     pure()
 );
@@ -245,8 +245,8 @@ test_take_while : IO ();
 test_take_while = (
     println $ "\n[test_take_while]";;
 
-    assert_eq(|_|"", StaticIter::range(1, 4).take_while(|i| i < 3).to_array, [1, 2]);;
-    assert_eq(|_|"", StaticIter::range(1, 4).take_while(|i| i < 1).to_array, [] : Array I64);;
+    assert_eq(|_|"", FastIterator::range(1, 4).take_while(|i| i < 3).to_array, [1, 2]);;
+    assert_eq(|_|"", FastIterator::range(1, 4).take_while(|i| i < 1).to_array, [] : Array I64);;
 
     pure()
 );
@@ -255,7 +255,7 @@ test_zip : IO ();
 test_zip = (
     println $ "\n[test_zip]";;
 
-    let iter = StaticIter::range(1, 4).zip(StaticIter::range(4, 10));
+    let iter = FastIterator::range(1, 4).zip(FastIterator::range(4, 10));
     assert_eq(|_|"", iter.to_array, [(1, 4), (2, 5), (3, 6)]);;
 
     pure()
@@ -266,8 +266,8 @@ test_monad = (
     println $ "\n[test_monad]";;
 
     let iter = do {
-        let x = *StaticIter::range(1, 4).to_dyn;
-        let y = *['A', 'B'].StaticIter::from_array.to_dyn;
+        let x = *FastIterator::range(1, 4).to_dyn;
+        let y = *['A', 'B'].FastIterator::from_array.to_dyn;
         pure $ (x, y)
     };
     assert_eq(|_|"", iter.to_array, [(1, 'A'), (1, 'B'), (2, 'A'), (2, 'B'), (3, 'A'), (3, 'B')]);;
@@ -279,39 +279,39 @@ test_range_step : IO ();
 test_range_step = (
     println $ "\n[test_range_step]";;
 
-    assert_eq(|_|"A-2", StaticIter::range_step(0, 10, -1).take(100).get_size, 100);;
-    assert_eq(|_|"A-1", StaticIter::range_step(0, 10, 0).take(100).get_size, 100);;
-    assert_eq(|_|"A0", StaticIter::range_step(0, 10, 0).take(100).get_size, 100);;
-    assert_eq(|_|"A1", StaticIter::range_step(0, 10, 1).to_array, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);;
-    assert_eq(|_|"A2", StaticIter::range_step(0, 10, 2).to_array, [0, 2, 4, 6, 8]);;
-    assert_eq(|_|"A3", StaticIter::range_step(0, 10, 3).to_array, [0, 3, 6, 9]);;
-    assert_eq(|_|"A4", StaticIter::range_step(0, 10, 4).to_array, [0, 4, 8]);;
-    assert_eq(|_|"A5", StaticIter::range_step(0, 10, 5).to_array, [0, 5]);;
-    assert_eq(|_|"A6", StaticIter::range_step(0, 10, 6).to_array, [0, 6]);;
-    assert_eq(|_|"A7", StaticIter::range_step(0, 10, 7).to_array, [0, 7]);;
-    assert_eq(|_|"A8", StaticIter::range_step(0, 10, 8).to_array, [0, 8]);;
-    assert_eq(|_|"A9", StaticIter::range_step(0, 10, 9).to_array, [0, 9]);;
-    assert_eq(|_|"A10", StaticIter::range_step(0, 10, 10).to_array, [0]);;
-    assert_eq(|_|"A11", StaticIter::range_step(0, 10, 11).to_array, [0]);;
+    assert_eq(|_|"A-2", FastIterator::range_step(0, 10, -1).take(100).get_size, 100);;
+    assert_eq(|_|"A-1", FastIterator::range_step(0, 10, 0).take(100).get_size, 100);;
+    assert_eq(|_|"A0", FastIterator::range_step(0, 10, 0).take(100).get_size, 100);;
+    assert_eq(|_|"A1", FastIterator::range_step(0, 10, 1).to_array, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);;
+    assert_eq(|_|"A2", FastIterator::range_step(0, 10, 2).to_array, [0, 2, 4, 6, 8]);;
+    assert_eq(|_|"A3", FastIterator::range_step(0, 10, 3).to_array, [0, 3, 6, 9]);;
+    assert_eq(|_|"A4", FastIterator::range_step(0, 10, 4).to_array, [0, 4, 8]);;
+    assert_eq(|_|"A5", FastIterator::range_step(0, 10, 5).to_array, [0, 5]);;
+    assert_eq(|_|"A6", FastIterator::range_step(0, 10, 6).to_array, [0, 6]);;
+    assert_eq(|_|"A7", FastIterator::range_step(0, 10, 7).to_array, [0, 7]);;
+    assert_eq(|_|"A8", FastIterator::range_step(0, 10, 8).to_array, [0, 8]);;
+    assert_eq(|_|"A9", FastIterator::range_step(0, 10, 9).to_array, [0, 9]);;
+    assert_eq(|_|"A10", FastIterator::range_step(0, 10, 10).to_array, [0]);;
+    assert_eq(|_|"A11", FastIterator::range_step(0, 10, 11).to_array, [0]);;
 
-    assert_eq(|_|"B2", StaticIter::range_step(10, 0, 2).take(100).get_size, 100);;
-    assert_eq(|_|"B1", StaticIter::range_step(10, 0, 1).take(100).get_size, 100);;
-    assert_eq(|_|"B0", StaticIter::range_step(10, 0, 0).take(100).get_size, 100);;
-    assert_eq(|_|"B-1", StaticIter::range_step(10, 0, -1).to_array, [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);;
-    assert_eq(|_|"B-2", StaticIter::range_step(10, 0, -2).to_array, [10, 8, 6, 4, 2]);;
-    assert_eq(|_|"B-3", StaticIter::range_step(10, 0, -3).to_array, [10, 7, 4, 1]);;
-    assert_eq(|_|"B-4", StaticIter::range_step(10, 0, -4).to_array, [10, 6, 2]);;
-    assert_eq(|_|"B-5", StaticIter::range_step(10, 0, -5).to_array, [10, 5]);;
-    assert_eq(|_|"B-6", StaticIter::range_step(10, 0, -6).to_array, [10, 4]);;
-    assert_eq(|_|"B-7", StaticIter::range_step(10, 0, -7).to_array, [10, 3]);;
-    assert_eq(|_|"B-8", StaticIter::range_step(10, 0, -8).to_array, [10, 2]);;
-    assert_eq(|_|"B-9", StaticIter::range_step(10, 0, -9).to_array, [10, 1]);;
-    assert_eq(|_|"B-10", StaticIter::range_step(10, 0, -10).to_array, [10]);;
-    assert_eq(|_|"B-11", StaticIter::range_step(10, 0, -11).to_array, [10]);;
+    assert_eq(|_|"B2", FastIterator::range_step(10, 0, 2).take(100).get_size, 100);;
+    assert_eq(|_|"B1", FastIterator::range_step(10, 0, 1).take(100).get_size, 100);;
+    assert_eq(|_|"B0", FastIterator::range_step(10, 0, 0).take(100).get_size, 100);;
+    assert_eq(|_|"B-1", FastIterator::range_step(10, 0, -1).to_array, [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);;
+    assert_eq(|_|"B-2", FastIterator::range_step(10, 0, -2).to_array, [10, 8, 6, 4, 2]);;
+    assert_eq(|_|"B-3", FastIterator::range_step(10, 0, -3).to_array, [10, 7, 4, 1]);;
+    assert_eq(|_|"B-4", FastIterator::range_step(10, 0, -4).to_array, [10, 6, 2]);;
+    assert_eq(|_|"B-5", FastIterator::range_step(10, 0, -5).to_array, [10, 5]);;
+    assert_eq(|_|"B-6", FastIterator::range_step(10, 0, -6).to_array, [10, 4]);;
+    assert_eq(|_|"B-7", FastIterator::range_step(10, 0, -7).to_array, [10, 3]);;
+    assert_eq(|_|"B-8", FastIterator::range_step(10, 0, -8).to_array, [10, 2]);;
+    assert_eq(|_|"B-9", FastIterator::range_step(10, 0, -9).to_array, [10, 1]);;
+    assert_eq(|_|"B-10", FastIterator::range_step(10, 0, -10).to_array, [10]);;
+    assert_eq(|_|"B-11", FastIterator::range_step(10, 0, -11).to_array, [10]);;
 
-    assert_eq(|_|"C1", StaticIter::range_step(0, 0, 1).get_size, 0);;
-    assert_eq(|_|"C0", StaticIter::range_step(0, 0, 0).get_size, 0);;
-    assert_eq(|_|"C-1", StaticIter::range_step(0, 0, -1).get_size, 0);;
+    assert_eq(|_|"C1", FastIterator::range_step(0, 0, 1).get_size, 0);;
+    assert_eq(|_|"C0", FastIterator::range_step(0, 0, 0).get_size, 0);;
+    assert_eq(|_|"C-1", FastIterator::range_step(0, 0, -1).get_size, 0);;
 
     pure()
 );

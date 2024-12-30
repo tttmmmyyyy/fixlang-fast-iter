@@ -1,4 +1,4 @@
-module StaticIter;
+module FastIterator;
 
 // The trait Iterable is a trait for types that can be iterated over.
 trait iter : Iterable {
