@@ -79,6 +79,10 @@ impl ArrayIterator a : Iterable {
 from_array : Array a -> ArrayIterator a;
 from_array = |arr| ArrayIterator { arr: arr, idx: 0 };
 
+// Convert any iterator to an array iterator.
+bang : [iter : Iterable, Item iter = a] iter -> ArrayIterator a;
+bang = |iter| iter.to_array.from_array;
+
 /*
     Basic iterators.
 */
@@ -113,18 +117,34 @@ impl RangeIterator : Iterable {
 range : I64 -> I64 -> RangeIterator;
 range = |start, end| RangeIterator { next: start, end: end };
 
-type MapIterator i a b = unbox struct { iter : i, f : a -> b };
-impl [i : Iterable, Item i = a] MapIterator i a b : Iterable {
-    type Item (MapIterator i a b) = b;
-    advance = |MapIterator { iter : iter, f : f }| (
-        match iter.advance {
-            none() => none(),
-            some((iter, a)) => some((MapIterator { iter: iter, f: f }, f(a)))
-        }
+type RangeStepIterator = unbox struct { next : I64, end : I64, step : I64 };
+
+impl RangeStepIterator : Iterable {
+    type Item RangeStepIterator = I64;
+    advance = |RangeStepIterator { next : next, end : end, step : step }| (
+        if next == end { Option::none() }
+        else { Option::some $ (RangeStepIterator { next: next + step, end: end, step: step }, next) }
     );
 }
 
+// Create an iterator that generates a range of numbers with a step.
+range_step : I64 -> I64 -> I64 -> RangeStepIterator;
+range_step = |start, end, step| (
+    // Adjust end so that `start + n * step == end` for some integer `n` (when `step` is not 0).
+    let end = if step == 0 { 
+        end
+    } else if step > 0 {
+        // step > 0
+        start + (end - start + step - 1) / step * step
+    } else {
+        // step < 0
+        start + (start - end - step - 1) / (-step) * step
+    };
+    RangeStepIterator { next: start, end: end, step: step }
+);
+
 type CountUpIterator = unbox struct { next : I64 };
+
 impl CountUpIterator : Iterable {
     type Item CountUpIterator = I64;
     advance = |CountUpIterator { next : next }| some((CountUpIterator { next: next + 1 }, next));
@@ -195,6 +215,17 @@ is_empty = |iter| iter.advance.is_none;
 /*
     Transforming iterators.
 */
+
+type MapIterator i a b = unbox struct { iter : i, f : a -> b };
+impl [i : Iterable, Item i = a] MapIterator i a b : Iterable {
+    type Item (MapIterator i a b) = b;
+    advance = |MapIterator { iter : iter, f : f }| (
+        match iter.advance {
+            none() => none(),
+            some((iter, a)) => some((MapIterator { iter: iter, f: f }, f(a)))
+        }
+    );
+}
 
 // Map a function over an iterator.
 // 
@@ -364,6 +395,8 @@ impl [i : Iterable, Item i = a] ReverseIterator i a : Iterable {
 }
 
 // Reverses an iterator.
+// 
+// NOTE: This function puts all elements of the iterator into an array, so it may consume a lot of memory.
 reverse : [i : Iterable, Item i = a] i -> ReverseIterator i a;
 reverse = |iter| (
     let arr = iter.to_array;
@@ -442,6 +475,16 @@ impl DynamicIterator a : Iterable {
     advance = |DynamicIterator { next : next }| next();
 }
 
+// Convert an iterator to a dynamic iterator.
+// 
+// NOTE: 
+// The advantage of `DynamicIterator` is that it hides how the iterator is constructed and simplifies the type,
+// especially allowing the use of monadic operations.
+// However, iterating over `DynamicIterator` are much slower than other iterators provided in this module.
+// Therefore, if performance is important, it is better to avoid using `DynamicIterator`.
+//
+// en: In particular, if you iterate over the same `DynamicIterator` multiple times, 
+// consider converting it to an `ArrayIterator` using `bang` before iterating.
 to_dyn : [iter : Iterable, Item iter = a] iter -> DynamicIterator a;
 to_dyn = |iter| DynamicIterator { next: |_| (
     match iter.advance {
