@@ -1,4 +1,6 @@
-module FastIterator;
+module Iterator;
+
+import Std hiding Iterator::*;
 
 // The trait Iterable is a trait for types that can be iterated over.
 trait iter : Iterable {
@@ -12,21 +14,21 @@ trait iter : Iterable {
 
 // Fold the elements of an iterator from left to right.
 //
-// Conceptually, `[a0, a1, a2, ...].fold(s, op) = s.op'(a0).op'(a1).op'(a2)...` where `op'` is the `op` with the order of arguments reversed.
-fold : [iter : Iterable, Item iter = a] s -> (s -> a -> s) -> iter -> s;
+// Conceptually, `[a0, a1, a2, ...].fold(s, op) = s.op(a0).op(a1).op(a2)...`.
+fold : [iter : Iterable, Item iter = a] s -> (a -> s -> s) -> iter -> s;
 fold = |s, op, iter| (
     match iter.advance {
         none() => s,
-        some((iter, a)) => iter.fold(op(s, a), op)
+        some((iter, a)) => iter.fold(op(a, s), op)
     }
 );
 
 // Fold the elements of an iterator from left to right by monadic action.
-fold_m : [m : Monad, iter : Iterable, Item iter = a] s -> (s -> a -> m s) -> iter -> m s;
+fold_m : [m : Monad, iter : Iterable, Item iter = a] s -> (a -> s -> m s) -> iter -> m s;
 fold_m = |s, op, iter| (
     match iter.advance {
         none() => pure(s),
-        some((iter, a)) => op(s, a).bind(|s| iter.fold_m(s, op))
+        some((iter, a)) => op(a, s).bind(|s| iter.fold_m(s, op))
     }
 );
 
@@ -45,16 +47,20 @@ loop_iter = |s, body, iter| (
 );
 
 // Loop over the elements of an iterator by monadic action.
-loop_iter_m : [m : Monad, iter : Iterable, Item iter = a] s -> (s -> a -> m (LoopState s s)) -> iter -> m s;
+loop_iter_m : [m : Monad, iter : Iterable, Item iter = a] s -> (a -> s -> m (LoopState s s)) -> iter -> m s;
 loop_iter_m = |s, body, iter| (
     match iter.advance {
         none() => pure(s),
-        some((iter, a)) => body(s, a).bind(|state| match state {
+        some((iter, a)) => body(a, s).bind(|state| match state {
             break(s) => pure(s),
             continue(s) => iter.loop_iter_m(s, body),
         })
     }
 );
+
+// Calcculate sum of the elements of an iterator.
+sum : [iter : Iterable, Item iter = a, a : Additive] iter -> a;
+sum = |iter| iter.fold(zero, |acc, a| acc + a);
 
 /*
     Conversion from / to arrays.
@@ -62,31 +68,38 @@ loop_iter_m = |s, body, iter| (
 
 // Convert an iterator to an array.
 to_array : [iter : Iterable, Item iter = a] iter -> Array a;
-to_array = |iter| iter.fold([], |acc, a| acc.push_back(a));
+to_array = |iter| iter.fold([], |a, acc| acc.push_back(a));
 
-type ArrayIterator a = unbox struct { arr : Array a, idx : I64 };
+namespace Array {
+    // Iterators that yields elements of an array.
+    type ArrayIterator a = unbox struct { arr : Array a, idx : I64 };
 
-impl ArrayIterator a : Iterable {
-    type Item (ArrayIterator a) = a;
-    advance = |ArrayIterator { arr : arr, idx : idx }| (
-        if idx == arr.get_size { none() };
-        let v = arr.@(idx);
-        some((ArrayIterator { arr: arr, idx: idx + 1 }, v))
-    );
+    impl ArrayIterator a : Iterable {
+        type Item (ArrayIterator a) = a;
+        advance = |ArrayIterator { arr : arr, idx : idx }| (
+            if idx == arr.get_size { none() };
+            let v = arr.@(idx);
+            some((ArrayIterator { arr: arr, idx: idx + 1 }, v))
+        );
+    }
+
+    // Convert an array to an iterator.
+    to_iter : Array a -> ArrayIterator a;
+    to_iter = |arr| ArrayIterator { arr: arr, idx: 0 };
 }
 
-// Convert an array to an iterator.
-from_array : Array a -> ArrayIterator a;
-from_array = |arr| ArrayIterator { arr: arr, idx: 0 };
-
 // Convert any iterator to an array iterator.
+// 
+// All elements of the input iterator are collected into an array. Therefore, this function may consume a lot of memory.
+// On the other hand, iteration may be faster by banging.
 bang : [iter : Iterable, Item iter = a] iter -> ArrayIterator a;
-bang = |iter| iter.to_array.from_array;
+bang = |iter| iter.to_array.to_iter;
 
 /*
     Basic iterators.
 */
 
+// Iterators that yields no elements.
 type EmptyIterator a = unbox struct {};
 impl EmptyIterator a : Iterable {
     type Item (EmptyIterator a) = a;
@@ -99,6 +112,7 @@ impl EmptyIterator a : Iterable {
 empty : EmptyIterator a;
 empty = EmptyIterator {};
 
+// Iterators that yields reversed elements of an iterator.
 type RangeIterator = unbox struct { next : I64, end : I64 };
 
 impl RangeIterator : Iterable {
@@ -178,13 +192,17 @@ impl StateIterator s a : Iterable {
 generate : s -> (s -> Option (s, a)) -> StateIterator s a;
 generate = |state, transit| StateIterator { state: some(state), transit: transit };
 
+// Create an iterator by a function that returns element at each index.
+from_map : (I64 -> a) -> MapIterator CountUpIterator I64 a;
+from_map = |f| count_up(0).map(f);
+
 /*
     Extract information from iterators.
 */
 
 // Get the number of elements in an iterator.
 get_size : [iter : Iterable] iter -> I64;
-get_size = |iter| iter.fold(0, |acc, _| acc + 1);
+get_size = |iter| iter.fold(0, |_, acc| acc + 1);
 
 // Get the first element of an iterator.
 // 
@@ -253,6 +271,23 @@ impl [i : Iterable, Item i = a] FilterIterator i a : Iterable {
 // `iter.filter(pred)` returns an iterator that only yields elements of `iter` for which `pred` returns `true`.
 filter : [i : Iterable, Item i = a] (a -> Bool) -> i -> FilterIterator i a;
 filter = |pred, iter| FilterIterator { iter: iter, pred: pred };
+
+type FilterMapIterator i a b = unbox struct { iter : i, f : a -> Option b };
+impl [i : Iterable, Item i = a] FilterMapIterator i a b : Iterable {
+    type Item (FilterMapIterator i a b) = b;
+    advance = |FilterMapIterator { iter : iter, f : f }| (
+        match iter.advance {
+            none() => none(),
+            some((iter, a)) => match f(a) {
+                none() => FilterMapIterator { iter: iter, f: f }.advance,
+                some(b) => some((FilterMapIterator { iter: iter, f: f }, b))
+            }
+        }
+    );
+}
+
+filter_map : [i : Iterable, Item i = a] (a -> Option b) -> i -> FilterMapIterator i a b;
+filter_map = |f, iter| FilterMapIterator { iter: iter, f: f };
 
 type FlattenIterator i2 i1 = unbox struct { i2 : i2, i1 : Option i1 };
 impl [i2 : Iterable, i1: Iterable, Item i2 = i1] FlattenIterator i2 i1 : Iterable {
@@ -460,41 +495,96 @@ impl [i1 : Iterable, i2 : Iterable] ZipIterator i1 i2 : Iterable {
 zip : [i1 : Iterable, i2 : Iterable] i2 -> i1 -> ZipIterator i1 i2;
 zip = |iter2, iter1| ZipIterator { iter1: iter1, iter2: iter2 };
 
-type DynamicIterator a = unbox struct { next : () -> Option (DynamicIterator a, a) };
+namespace String {
+    type StringSplitIterator = unbox struct { idx : I64, str : String, strlen : I64, sep : String, sep_len : I64 };
 
-namespace DynamicIterator {
-    empty : DynamicIterator a;
-    empty = DynamicIterator { next: |_| none() };
+    impl StringSplitIterator : Iterable {
+        type Item StringSplitIterator = String;
+        advance = |iter| (
+            let StringSplitIterator { idx: idx, str: str, strlen: strlen, sep: sep, sep_len: sep_len } = iter;
+            if sep_len == 0 {
+                if idx == strlen { none() };
+                let c_str = String::from_U8 $ str.get_bytes.@(idx);
+                some $ (iter.set_idx(idx + 1), c_str)
+            };
+            if idx == -1 { none() };
+            match str.find(sep, idx) {
+                none() => some $ (iter.set_idx(-1), str.get_sub(idx, strlen)),
+                some(pos) => some $ (iter.set_idx(pos + sep_len), str.get_sub(idx, pos))
+            }
+        );
+    }
 
-    singleton : a -> DynamicIterator a;
-    singleton = |a| DynamicIterator { next: |_| some((DynamicIterator::empty, a)) };
+    // `str.split(sep)` splits `str` by `sep` into an iterator.
+    // 
+    // Example:
+    // ```
+    // assert_eq(|_|"Ex. 1", "ab,c,".split(",").to_array, ["ab", "c", ""]);;
+    // assert_eq(|_|"Ex. 2", "abc".split(",").to_array, ["abc"]);;
+    // assert_eq(|_|"Ex. 3", "abc".split("").to_array, ["a", "b", "c"]);; // Special behavior when the separator is empty.
+    // ```
+    split : String -> String -> StringSplitIterator;
+    split = |sep, str| StringSplitIterator { idx: 0, str: str, strlen: str.get_size, sep: sep, sep_len: sep.get_size };
 }
 
-impl DynamicIterator a : Iterable {
-    type Item (DynamicIterator a) = a;
-    advance = |DynamicIterator { next : next }| next();
+type DynIterator a = unbox struct { next : () -> Option (DynIterator a, a) };
+
+// A dynamic iterator.
+// 
+// For details, see the `to_dyn` function.
+impl DynIterator a : Iterable {
+    type Item (DynIterator a) = a;
+    advance = |DynIterator { next : next }| next();
 }
 
-// Convert an iterator to a dynamic iterator.
+namespace DynIterator {
+    empty : DynIterator a;
+    empty = DynIterator { next: |_| none() };
+
+    singleton : a -> DynIterator a;
+    singleton = |a| DynIterator { next: |_| some((DynIterator::empty, a)) };
+}
+
+// Convert an iterator into a dynamic iterator.
 // 
 // NOTE: 
 // 
-// The advantage of `DynamicIterator` is that it hides how the iterator is constructed and simplifies the type,
-// especially allowing the use of monadic operations.
-// However, iterating over `DynamicIterator` are much slower than other iterators provided in this module.
+// The advantage of `DynIterator` is that it hides how the iterator is constructed and simplifies the type.
+// This allows, for example,
+// - `DynIterator` can be an instance of traits such as `Monad`, `Eq`, etc.
+// - In a function, it is possible to return two iterators with different construction methods depending on the branch.
+// 
+// However, iterating over `DynIterator` are much slower than iterating over other iterators provided in this namespace.
 // Therefore, if performance is important, it is better to avoid using `DynamicIterator`.
-//
 // In particular, if you iterate over the same `DynamicIterator` multiple times, 
 // consider converting it to an `ArrayIterator` using `bang` before iterating.
-to_dyn : [iter : Iterable, Item iter = a] iter -> DynamicIterator a;
-to_dyn = |iter| DynamicIterator { next: |_| (
-    match iter.advance {
-        none() => none(),
-        some((iter, a)) => some((iter.to_dyn, a))
-    }
-) };
+to_dyn : [iter : Iterable, Item iter = a] iter -> DynIterator a;
+to_dyn = |iter| DynIterator { next: |_| iter.advance.map(|(iter, a)| (iter.to_dyn, a)) };
 
-impl DynamicIterator : Monad {
-    pure = |a| DynamicIterator::singleton(a);
+impl DynIterator : Monad {
+    pure = |a| DynIterator::singleton(a);
     bind = |f, xs| xs.map(f).flatten.to_dyn;
 }
+
+impl [a : Eq] DynIterator a : Eq {
+    eq = |lhs, rhs| (
+        match lhs.advance {
+            none() => rhs.advance.is_none,
+            some((lhs, a)) => match rhs.advance {
+                none() => false,
+                some((rhs, b)) => a == b && lhs == rhs
+            }
+        }
+    );
+}
+
+impl DynIterator a : Add {
+    add = |lhs, rhs| lhs.append(rhs).to_dyn;
+}
+
+/*
+    Bridging with Std iterators.
+*/
+
+to_std_iter : [iter : Iterable, Item iter = a] iter -> Std::Iterator a;
+to_std_iter = |iter| Std::Iterator { next: |_| iter.advance.map(|(x, y)| (y, x.to_std_iter)) };
