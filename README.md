@@ -20,7 +20,7 @@ The important changes from `Std::Iterator` are as follows.
 - The type of the `advance` function is `[iter : Iterable] iter -> Option (iter, Item iter);`, and the order of the elements in the return pair is reversed from `Std::Iterator::advance`.
   - This is to make it closer to the convention of implementing the state monad.
 - The type of the `fold` function is `[iter : Iterable, Item iter = a] s -> (a -> s -> s) -> iter -> s`, and the order of the arguments of the operator is reversed from `Std::Iterator::fold`.
-  - `Std::Iterator` adopted the same order as Haskell, but it was changed to a more Fix-like order. For example, in Fix, the order of arguments is `push_back : a -> Array a -> Array a`.
+  - `Std::Iterator` adopted the same order as Haskell, but it was changed to follow conventions in Fix. For example, in Fix, the order of arguments is `push_back : a -> Array a -> Array a`.
   - The order of arguments of `fold_m`, `loop_iter`, and `loop_iter_m` has also been changed in the same way.
 
 Other functions provided in this module are as follows.
