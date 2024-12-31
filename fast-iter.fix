@@ -12,21 +12,21 @@ trait iter : Iterable {
 
 // Fold the elements of an iterator from left to right.
 //
-// Conceptually, `[a0, a1, a2, ...].fold(s, op) = s.op(a0).op(a1).op(a2)...`.
-fold : [iter : Iterable, Item iter = a] s -> (a -> s -> s) -> iter -> s;
+// Conceptually, `[a0, a1, a2, ...].fold(s, op) = s.op'(a0).op'(a1).op'(a2)...` where `op'` is the `op` with the order of arguments reversed.
+fold : [iter : Iterable, Item iter = a] s -> (s -> a -> s) -> iter -> s;
 fold = |s, op, iter| (
     match iter.advance {
         none() => s,
-        some((iter, a)) => iter.fold(op(a, s), op)
+        some((iter, a)) => iter.fold(op(s, a), op)
     }
 );
 
 // Fold the elements of an iterator from left to right by monadic action.
-fold_m : [m : Monad, iter : Iterable, Item iter = a] s -> (a -> s -> m s) -> iter -> m s;
+fold_m : [m : Monad, iter : Iterable, Item iter = a] s -> (s -> a -> m s) -> iter -> m s;
 fold_m = |s, op, iter| (
     match iter.advance {
         none() => pure(s),
-        some((iter, a)) => op(a, s).bind(|s| iter.fold_m(s, op))
+        some((iter, a)) => op(s, a).bind(|s| iter.fold_m(s, op))
     }
 );
 
@@ -45,11 +45,11 @@ loop_iter = |s, body, iter| (
 );
 
 // Loop over the elements of an iterator by monadic action.
-loop_iter_m : [m : Monad, iter : Iterable, Item iter = a] s -> (a -> s -> m (LoopState s s)) -> iter -> m s;
+loop_iter_m : [m : Monad, iter : Iterable, Item iter = a] s -> (s -> a -> m (LoopState s s)) -> iter -> m s;
 loop_iter_m = |s, body, iter| (
     match iter.advance {
         none() => pure(s),
-        some((iter, a)) => body(a, s).bind(|state| match state {
+        some((iter, a)) => body(s, a).bind(|state| match state {
             break(s) => pure(s),
             continue(s) => iter.loop_iter_m(s, body),
         })
@@ -62,7 +62,7 @@ loop_iter_m = |s, body, iter| (
 
 // Convert an iterator to an array.
 to_array : [iter : Iterable, Item iter = a] iter -> Array a;
-to_array = |iter| iter.fold([], |a, acc| acc.push_back(a));
+to_array = |iter| iter.fold([], |acc, a| acc.push_back(a));
 
 type ArrayIterator a = unbox struct { arr : Array a, idx : I64 };
 
@@ -184,7 +184,7 @@ generate = |state, transit| StateIterator { state: some(state), transit: transit
 
 // Get the number of elements in an iterator.
 get_size : [iter : Iterable] iter -> I64;
-get_size = |iter| iter.fold(0, |_, acc| acc + 1);
+get_size = |iter| iter.fold(0, |acc, _| acc + 1);
 
 // Get the first element of an iterator.
 // 

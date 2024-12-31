@@ -108,7 +108,7 @@ test_product = (
     let (res1, time) = consumed_time_while_lazy(|_|
         let r1 = FastIterator::range(1, n);
         let r2 = FastIterator::range(1, 2*n*n);
-        r1.product(r1).product(r2).filter(|((a, b), c)| a*a + b*b == c*c).fold(0, |_, sum| sum + 1)
+        r1.product(r1).product(r2).filter(|((a, b), c)| a*a + b*b == c*c).fold(0, |sum, _| sum + 1)
     );
     println("pythagorean_triple: " + time.to_string);;
 
