@@ -6,8 +6,10 @@ This library aims to replace `Std::Iterator` in Fix in the future.
 It is recommended to hide `Std::Iterator` when using this library as follows.
 
 ```
-import Iterator; // Import this library.
-import Std hiding {Iterator::*, Array::to_iter, String::split}; // Hide entities conflicting with this library. Note that `Std::Iterator` is still imported.
+// Import this library.
+import Iterator;
+// Hide entities conflicting with this library. Note that `Std::Iterator` is still imported.
+import Std hiding {Iterator::*, Array::to_iter, String::split};
 ```
 
 The important changes from `Std::Iterator` are as follows.
