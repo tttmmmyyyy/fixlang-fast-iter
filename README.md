@@ -31,4 +31,4 @@ Other functions provided in this module are as follows.
 
 ## Future plan
 
-In a future, `Std::Iterator::*` (i.e., all functions related to `Std::Iterator`, except the type `Std::Iterator`) will be removed from Fix, and this library will be put in `Std`.
+In a future, `Std::Iterator::*` (i.e., all functions related to `Std::Iterator`, except the type `Std::Iterator`) will be removed from Std, and this library will be put in `Std`.
