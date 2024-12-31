@@ -20,7 +20,7 @@
 
 ### `test_generate : Std::IO ()`
 
-### `test_get_first : Std::IO ()`
+### `test_get_front : Std::IO ()`
 
 ### `test_get_size : Std::IO ()`
 
@@ -36,7 +36,7 @@
 
 ### `test_monad : Std::IO ()`
 
-### `test_product : Std::IO ()`
+### `test_product_filtermap : Std::IO ()`
 
 ### `test_push_front : Std::IO ()`
 
@@ -45,6 +45,8 @@
 ### `test_range_step : Std::IO ()`
 
 ### `test_remove_first : Std::IO ()`
+
+### `test_string_split : Std::IO ()`
 
 ### `test_take : Std::IO ()`
 
