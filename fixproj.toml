@@ -3,7 +3,7 @@
 name = "fast-iter"
 
 ## Project version (in semver). This is a required field.
-version = "0.1.0"
+version = "0.2.0"
 
 ## Project authors.
 # authors = ["Alice", "Bob"]

@@ -527,64 +527,27 @@ namespace String {
     split = |sep, str| StringSplitIterator { idx: 0, str: str, strlen: str.get_size, sep: sep, sep_len: sep.get_size };
 }
 
-type DynIterator a = unbox struct { next : () -> Option (DynIterator a, a) };
-
-// A dynamic iterator.
-// 
-// For details, see the `to_dyn` function.
-impl DynIterator a : Iterable {
-    type Item (DynIterator a) = a;
-    advance = |DynIterator { next : next }| next();
-}
-
-namespace DynIterator {
-    empty : DynIterator a;
-    empty = DynIterator { next: |_| none() };
-
-    singleton : a -> DynIterator a;
-    singleton = |a| DynIterator { next: |_| some((DynIterator::empty, a)) };
-}
+/*
+    Bridging between dynamic iterator.
+*/
 
 // Convert an iterator into a dynamic iterator.
 // 
 // NOTE: 
 // 
-// The advantage of `DynIterator` is that it hides how the iterator is constructed and simplifies the type.
+// The advantage of dynamic iterator (i.e., `Std::Iterator`) is that it hides how the iterator is constructed and simplifies the type.
 // This allows, for example,
-// - `DynIterator` can be an instance of traits such as `Monad`, `Eq`, etc.
-// - In a function, it is possible to return two iterators with different construction methods depending on the branch.
+// - `Iterator` can be instances of traits such as `Monad`, `Eq`, etc.
+// - In a function, it is possible to return two iterators with different constructions depending on the branch.
 // 
-// However, iterating over `DynIterator` are much slower than iterating over other iterators provided in this namespace.
-// Therefore, if performance is important, it is better to avoid using `DynamicIterator`.
-// In particular, if you iterate over the same `DynamicIterator` multiple times, 
+// However, iterating over `Iterator` are much slower than iterating over other iterators provided in this namespace.
+// Therefore, if performance is important, it is better to avoid using `Iterator`.
+// In particular, if you iterate over the same `Iterator` multiple times, 
 // consider converting it to an `ArrayIterator` using `bang` before iterating.
-to_dyn : [iter : Iterable, Item iter = a] iter -> DynIterator a;
-to_dyn = |iter| DynIterator { next: |_| iter.advance.map(|(iter, a)| (iter.to_dyn, a)) };
+to_dyn : [iter : Iterable, Item iter = a] iter -> Std::Iterator a;
+to_dyn = |iter| Std::Iterator { next: |_| iter.advance.map(|(iter, elm)| (elm, iter.to_dyn)) };
 
-impl DynIterator : Monad {
-    pure = |a| DynIterator::singleton(a);
-    bind = |f, xs| xs.map(f).flatten.to_dyn;
+impl Std::Iterator a : Iterable {
+    type Item (Std::Iterator a) = a;
+    advance = |Std::Iterator { next : next }| next().map(|(a, iter)| (iter, a));
 }
-
-impl [a : Eq] DynIterator a : Eq {
-    eq = |lhs, rhs| (
-        match lhs.advance {
-            none() => rhs.advance.is_none,
-            some((lhs, a)) => match rhs.advance {
-                none() => false,
-                some((rhs, b)) => a == b && lhs == rhs
-            }
-        }
-    );
-}
-
-impl DynIterator a : Add {
-    add = |lhs, rhs| lhs.append(rhs).to_dyn;
-}
-
-/*
-    Bridging with Std iterators.
-*/
-
-to_std_iter : [iter : Iterable, Item iter = a] iter -> Std::Iterator a;
-to_std_iter = |iter| Std::Iterator { next: |_| iter.advance.map(|(x, y)| (y, x.to_std_iter)) };
