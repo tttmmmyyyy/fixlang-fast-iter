@@ -12,6 +12,8 @@
 
 ### `test : Std::IO ()`
 
+### `test_collect_m : Std::IO ()`
+
 ### `test_empty : Std::IO ()`
 
 ### `test_flatten : Std::IO ()`

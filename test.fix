@@ -257,6 +257,19 @@ test_monad = (
     pure()
 );
 
+test_collect_m : IO ();
+test_collect_m = (
+    println $ "\n[test_collect_m]";;
+
+    let res = [some(1), some(2), some(3)].to_iter.collect_m;
+    assert_eq(|_|"", res, some([1, 2, 3]));;
+
+    let res = [some(1), some(2), none()].to_iter.collect_m;
+    assert_eq(|_|"", res, none());;
+
+    pure()
+);
+
 test_range_step : IO ();
 test_range_step = (
     println $ "\n[test_range_step]";;
@@ -341,6 +354,7 @@ test = (
     test_zip;;
     test_monad;;
     test_string_split;;
+    test_collect_m;;
 
     pure()
 );

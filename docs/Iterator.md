@@ -209,6 +209,10 @@ Convert any iterator to an array iterator.
 All elements of the input iterator are collected into an array. Therefore, this function may consume a lot of memory.
 On the other hand, iteration may be faster by banging.
 
+### `collect_m : [m : Std::Monad, iter : Iterator::Iterable, Iterator::Iterable::Item iter = m a] iter -> m (Std::Array a)`
+
+Executes monadic actions and collects the results into an array.
+
 ### `count_up : Std::I64 -> Iterator::CountUpIterator`
 
 Create an iterator that counts up from a number.
@@ -228,6 +232,10 @@ Filter the elements of an iterator by a predicate.
 `iter.filter(pred)` returns an iterator that only yields elements of `iter` for which `pred` returns `true`.
 
 ### `filter_map : [i : Iterator::Iterable, Iterator::Iterable::Item i = a] (a -> Std::Option b) -> i -> Iterator::FilterMapIterator i a b`
+
+Filter and map the elements of an iterator.
+
+`iter.filter_map(f)` returns an iterator that applies `f` to each element of `iter` and yields the result if it is `some`.
 
 ### `flatten : [i2 : Iterator::Iterable, i1 : Iterator::Iterable, Iterator::Iterable::Item i2 = i1] i2 -> Iterator::FlattenIterator i2 i1`
 

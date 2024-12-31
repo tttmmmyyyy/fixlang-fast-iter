@@ -58,6 +58,10 @@ loop_iter_m = |s, body, iter| (
     }
 );
 
+// Executes monadic actions and collects the results into an array.
+collect_m : [m : Monad, iter : Iterable, Item iter = m a] iter -> m (Array a);
+collect_m = |iter| iter.fold_m([], |act, acm| pure $ acm.push_back(*act));
+
 // Calcculate sum of the elements of an iterator.
 sum : [iter : Iterable, Item iter = a, a : Additive] iter -> a;
 sum = |iter| iter.fold(zero, |acc, a| acc + a);
@@ -286,6 +290,9 @@ impl [i : Iterable, Item i = a] FilterMapIterator i a b : Iterable {
     );
 }
 
+// Filter and map the elements of an iterator.
+// 
+// `iter.filter_map(f)` returns an iterator that applies `f` to each element of `iter` and yields the result if it is `some`.
 filter_map : [i : Iterable, Item i = a] (a -> Option b) -> i -> FilterMapIterator i a b;
 filter_map = |f, iter| FilterMapIterator { iter: iter, f: f };
 
