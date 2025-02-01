@@ -50,6 +50,8 @@
 
 ### `test_string_split : Std::IO ()`
 
+### `test_sum : Std::IO ()`
+
 ### `test_take : Std::IO ()`
 
 ### `test_take_while : Std::IO ()`

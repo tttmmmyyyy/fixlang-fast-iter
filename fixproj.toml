@@ -9,7 +9,7 @@ version = "0.2.1"
 # authors = ["Alice", "Bob"]
 
 ## Project description.
-# description = "This is a Fix project."
+description = "High performance iterator library."
 
 ## Project license.
 # license = "MIT"
